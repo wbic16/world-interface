@@ -137,6 +137,7 @@ To add a new environment:
     const MemeMagic = require('./environments/meme_magic');
     const Search = require('./environments/search');
     const Weather = require('./environments/weather'); // Newly added
+    const Phext = require('./environments/phext');
 
     const environments = {
         twitter: new Twitter(),
@@ -145,6 +146,7 @@ To add a new environment:
         meme_magic: new MemeMagic(),
         search: new Search(),
         weather: new Weather(), // Registering the new environment
+        phext: new Phext(),
     };
 
     module.exports = {

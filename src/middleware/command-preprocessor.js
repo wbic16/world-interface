@@ -104,7 +104,7 @@ async function correctCommandWithLLM(command, availableCommands, messages) {
         console.error("Error calling OctoAI:", error);
         return {
             processedCommand: command,
-            helpText: "Unable to process command. Please try again.",
+            helpText: "Unable to process command (due to: " + error + "). Please try again.",
         };
     }
 }

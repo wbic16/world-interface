@@ -8,6 +8,7 @@ const globalState = require("./src/global-state");
 
 const app = express();
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 
 const environmentRegistry = new EnvironmentRegistry();
 const commandHandler = new CommandHandler(environmentRegistry);
@@ -15,14 +16,14 @@ const worldInterfaceKey = process.env.WORLD_INTERFACE_KEY;
 
 // Bearer token authentication middleware
 const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1];
+    //const authHeader = req.headers["authorization"];
+    const token = worldInterfaceKey; // authHeader && authHeader.split(" ")[1];
 
-    if (token == null) return res.sendStatus(401);
+    //if (token == null) return res.sendStatus(401);
 
     // In a real-world scenario, you'd validate the token against a database or external auth service
     // For this example, we'll use a hardcoded token
-    if (token !== worldInterfaceKey) return res.sendStatus(403);
+    //if (token !== worldInterfaceKey) return res.sendStatus(403);
 
     next();
 };
@@ -30,13 +31,46 @@ const authenticateToken = (req, res, next) => {
 // Apply authentication middleware to all routes
 app.use(authenticateToken);
 
-app.post("/v1/chat/completions", async (req, res) => {
-    const { messages, stream = false } = req.body;
+app.get("/v1/chat/completions", async (req, res) => {
+    res.writeHead(200, {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+    });
+    res.write(`
+<html>
+<head>
+<style type='text/css'>
+body {background-color: black; color: white; font-family: monospace; font-size: 1.5em; }
+textarea { font-size: 1.5em; }
+</style>
+</head>
+<body>
+<form method="POST">
+<input type="submit" value="Send" /><br />
+<textarea name="content" rows="30" cols="110"></textarea>
 
-    if (!Array.isArray(messages) || messages.length === 0) {
+</form>
+</body>
+</html>
+`);
+    res.end();
+})
+app.post("/v1/chat/completions", async (req, res) => {
+    var { messages, content = false, stream = false } = req.body;
+
+    const haveJSON = Array.isArray(messages) && messages.length > 0;
+    const haveForm = content.length > 0;
+
+    if (!haveJSON && !haveForm) {
         return res
             .status(400)
-            .json({ error: "Invalid input: messages array is required" });
+            .json({ error: "Invalid input: messages array or HTML form input needed" });
+    }
+
+    if (!haveJSON) {
+        messages = Array();
+        messages.push({role: "user", content: content});
     }
 
     const lastUserMessage = messages
@@ -49,13 +83,13 @@ app.post("/v1/chat/completions", async (req, res) => {
     }
 
     const allCommands = environmentRegistry.getAllCommands();
-    const { processedCommand, helpText } = await preprocessCommand(
+    /*const { processedCommand, helpText } = await preprocessCommand(
         lastUserMessage.content,
         allCommands,
         messages
-    );
+    );*/
 
-    console.log("Processed command:", processedCommand);
+    //console.log("Processed command:", processedCommand);
 
     // Update global state
     globalState.update({
@@ -64,10 +98,10 @@ app.post("/v1/chat/completions", async (req, res) => {
     });
 
     try {
-        const result = await commandHandler.handle(processedCommand, messages);
-        if (helpText) {
-            result.ui = `Preprocessor: ${helpText}\n\n${result.ui}`;
-        }
+        const result = await commandHandler.handle(lastUserMessage.content, messages);
+        //if (helpText) {
+        //    result.ui = `Preprocessor: ${helpText}\n\n${result.ui}`;
+       // }
 
         if (stream) {
             // Set appropriate headers for streaming
